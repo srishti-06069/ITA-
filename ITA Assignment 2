@@ -1,0 +1,152 @@
+# Problem 4: Dimensionality Reduction and Disease Prediction
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.datasets import load_breast_cancer
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+
+
+# -------------------------------
+# 1. Load Dataset
+# -------------------------------
+data = load_breast_cancer()
+
+X = pd.DataFrame(data.data, columns=data.feature_names)
+y = data.target
+
+
+# -------------------------------
+# 2. Feature Normalization
+# -------------------------------
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+
+# -------------------------------
+# 3. Correlation Analysis
+# -------------------------------
+plt.figure(figsize=(10,8))
+sns.heatmap(X.corr(), cmap="coolwarm")
+plt.title("Feature Correlation Matrix")
+plt.show()
+
+
+# -------------------------------
+# 4. Train/Test Split (Full Features)
+# -------------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X_scaled, y, test_size=0.2, random_state=42
+)
+
+
+# -------------------------------
+# 5. Train Models (Full Features)
+# -------------------------------
+
+# Logistic Regression
+lr = LogisticRegression(max_iter=5000)
+lr.fit(X_train, y_train)
+lr_pred = lr.predict(X_test)
+
+# SVM
+svm = SVC(kernel='linear')
+svm.fit(X_train, y_train)
+svm_pred = svm.predict(X_test)
+
+# KNN
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train, y_train)
+knn_pred = knn.predict(X_test)
+
+
+print("Performance with FULL FEATURES")
+print("Logistic Regression:", accuracy_score(y_test, lr_pred))
+print("SVM:", accuracy_score(y_test, svm_pred))
+print("KNN:", accuracy_score(y_test, knn_pred))
+
+
+# -------------------------------
+# 6. Apply PCA
+# -------------------------------
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_scaled)
+
+
+# -------------------------------
+# 7. Train/Test Split (PCA Data)
+# -------------------------------
+X_train_pca, X_test_pca, y_train_pca, y_test_pca = train_test_split(
+    X_pca, y, test_size=0.2, random_state=42
+)
+
+
+# -------------------------------
+# 8. Train Models on PCA Features
+# -------------------------------
+
+lr_pca = LogisticRegression(max_iter=5000)
+lr_pca.fit(X_train_pca, y_train_pca)
+lr_pca_pred = lr_pca.predict(X_test_pca)
+
+svm_pca = SVC(kernel='linear')
+svm_pca.fit(X_train_pca, y_train_pca)
+svm_pca_pred = svm_pca.predict(X_test_pca)
+
+knn_pca = KNeighborsClassifier(n_neighbors=5)
+knn_pca.fit(X_train_pca, y_train_pca)
+knn_pca_pred = knn_pca.predict(X_test_pca)
+
+
+print("\nPerformance with PCA Features")
+print("Logistic Regression:", accuracy_score(y_test_pca, lr_pca_pred))
+print("SVM:", accuracy_score(y_test_pca, svm_pca_pred))
+print("KNN:", accuracy_score(y_test_pca, knn_pca_pred))
+
+
+# -------------------------------
+# 9. PCA Visualization
+# -------------------------------
+plt.figure(figsize=(8,6))
+plt.scatter(X_pca[:,0], X_pca[:,1], c=y, cmap='viridis')
+plt.xlabel("Principal Component 1")
+plt.ylabel("Principal Component 2")
+plt.title("PCA Projection of Breast Cancer Dataset")
+plt.show()
+
+
+# -------------------------------
+# 10. Decision Boundary (Using SVM)
+# -------------------------------
+
+model = SVC(kernel='linear')
+model.fit(X_pca, y)
+
+plt.figure(figsize=(8,6))
+plt.scatter(X_pca[:,0], X_pca[:,1], c=y, cmap='coolwarm')
+
+ax = plt.gca()
+xlim = ax.get_xlim()
+ylim = ax.get_ylim()
+
+# create grid
+xx = np.linspace(xlim[0], xlim[1], 30)
+yy = np.linspace(ylim[0], ylim[1], 30)
+YY, XX = np.meshgrid(yy, xx)
+
+xy = np.vstack([XX.ravel(), YY.ravel()]).T
+Z = model.decision_function(xy).reshape(XX.shape)
+
+ax.contour(XX, YY, Z, levels=[0], colors='black')
+
+plt.title("Decision Boundary with PCA")
+plt.show()
